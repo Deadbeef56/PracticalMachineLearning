@@ -1,0 +1,92 @@
+---
+title: "Practical Machine Learning Class Project"
+author: deadbeef56
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+This project examines accelerometer data collected using devices such as Jawbone Up, Nike FuelBand, and Fitbit.  A group of subjects were asked to perform a series of exercises using dumbells. The subjects were instructed to perform the exercise with correct form, and also to replicate many common mistakes made in lifing exercises. The accelerometer data was collected for each exercise and rated as to how well the exercise was performed.
+
+The goal of this project is to be able to determine from instrument readings alone how well a subject is performing a certain exercise. One application of such a model might be to be able to give immediate automated feedback to an athlete on the correctness of his or her form along with suggestions for improvement.
+
+
+## Data
+
+The data for this analysis was obtained from the following website: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+```{r echo=TRUE}
+set.seed(11679)
+myData <- read.csv("C:/Users/howar_000/Downloads/pml-training.csv")
+dim(myData)
+```
+
+
+### Feature selection and Data Tidying
+The data contains 160 columns and 19622 rows.  Columns 1-7 are used for identifying the source of the data.  Column 160 contains the result to be predicted. In addition, 100 columns contain aggregations of other measurements (and thus correlated with other values) and are most often absent from the data. For these reasons, they were excluded from the analysis.  This leaves 52 measurements and one result column in our selected data set.
+
+```{r echo=TRUE,warning=FALSE}
+# first convert the measurement fields to numeric
+for(i in 8:159) {
+    myData[,i] <- as.numeric(as.character(myData[,i]))
+}    
+    
+# discard the columns that are mostly NAs.  Use the first row as a guide    
+myData <- myData[,which(!is.na(myData[1,]))]    
+
+
+
+# the columns identifying the source of the data aren't used in the analysis
+myData <- myData[,8:60]
+
+# display the features used in this analysis
+colnames(myData)
+```
+
+### Cross Validation Data
+Because we will need to cross validate our model before applying it to the test set, we will split the data into separate training and validation sets
+
+```{r echo=TRUE}
+library(caret)
+inTrain <- createDataPartition(myData$classe, p=0.5, list=FALSE)
+training <- myData[inTrain,]
+validating <- myData[-inTrain,]
+```
+
+## Building the model
+
+We will use a Random Forest model for this analysis. To reduce the number of features, we will use PCA preprocessing. This takes about 30 minutes on my laptop.
+
+```{r echo=TRUE,cache=TRUE,warning=FALSE}
+library(randomForest)
+rfFit <- train(classe ~ ., method="rf", preProcess="pca", data=training)
+```
+### In-sample Error
+
+Let's first examine our in-sample accuracy
+
+```{r echo=TRUE}
+prd <- predict(rfFit, training)
+confusionMatrix(prd, training$classe)
+
+```
+
+### Out of Sample Error
+
+Now we apply our model to our validation set
+```{r echo=TRUE}
+prdV <- predict(rfFit, validating)
+confusionMatrix(prdV, validating$classe)
+```
+### Predictions against Test Set
+
+Finally, we will apply the model to the 20 test cases and record the predictions
+```{r echo=TRUE}
+testing <- read.csv("C:/Users/howar_000/Downloads/pml-testing.csv")
+predict(rfFit, testing)
+
+```

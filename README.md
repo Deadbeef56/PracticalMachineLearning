@@ -1,0 +1,1 @@
+This repository holds my project submission for the Practical Machine Learning course that is part of the John Hopkins Data Science specialty on Coursera.
